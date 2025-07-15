@@ -26,6 +26,11 @@ jobs:
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
       
+    - name: Install required SDK components
+      run: |
+        sdkmanager "platforms;android-33" "build-tools;33.0.2" "platform-tools"
+        sdkmanager --licenses
+      
     - name: Setup Gradle
       uses: gradle/gradle-build-action@v2
       with:
@@ -59,12 +64,22 @@ jobs:
     - name: Clean project
       run: |
         cd android
-        ./gradlew clean
+        ./gradlew clean --stacktrace --info
+        
+    - name: List Android SDK components
+      run: |
+        sdkmanager --list | head -20
+        
+    - name: Check project structure
+      run: |
+        cd android
+        find . -name "*.gradle" -type f
+        cat app/build.gradle | head -20
         
     - name: Build debug APK
       run: |
         cd android
-        ./gradlew assembleDebug --stacktrace --info
+        ./gradlew assembleDebug --stacktrace --info --debug --scan
         
     - name: Upload APK
       uses: actions/upload-artifact@v4
