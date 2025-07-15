@@ -5,12 +5,7 @@ plugins {
     id 'org.jetbrains.kotlin.android' version '1.8.0' apply false
 }
 
-allprojects {
-    repositories {
-        google()
-        mavenCentral()
-    }
-}
+// Repository'ler artık settings.gradle'da tanımlanıyor (Gradle 8.0+ best practice)
 
 task clean(type: Delete) {
     delete rootProject.buildDir
