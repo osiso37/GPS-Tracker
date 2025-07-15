@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block extra_css %}
+<style>
+    #map {
+        height: 600px;
+        width: 100%;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .employee-list {
+        max-height: 600px;
+        overflow-y: auto;
+    }
+    .employee-card {
+        margin-bottom: 10px;
+        cursor: pointer;
+    }
+    .employee-card:hover {
+        background-color: #f8f9fa;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Çalışanlar</h5>
+            </div>
+            <div class="card-body employee-list">
+                {% for employee in employees %}
+                <div class="card employee-card" data-employee-id="{{ employee.EmployeeID }}">
+                    <div class="card-body">
+                        <h6 class="card-title">{{ employee.FirstName }} {{ employee.LastName }}</h6>
+                        <p class="card-text small mb-0">Son konum: <span class="last-update-{{ employee.EmployeeID }}">-</span></p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    <div class="col-md-9">
+        <div id="map"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Harita başlatma
+    const map = L.map('map').setView([39.9334, 32.8597], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Çalışan işaretleyicileri
+    const markers = {};
+    
+    // Socket.io bağlantısı
+    const socket = io();
+    
+    socket.on('connect', () => {
+        console.log('Socket.io bağlantısı başarılı');
+    });
+
+    socket.on('location_update', (data) => {
+        updateEmployeeLocation(data);
+    });
+
+    function updateEmployeeLocation(data) {
+        const employeeId = data.employee_id;
+        const position = [data.latitude, data.longitude];
+        
+        // İşaretleyiciyi güncelle veya oluştur
+        if (markers[employeeId]) {
+            markers[employeeId].setLatLng(position);
+        } else {
+            markers[employeeId] = L.marker(position).addTo(map);
+        }
+        
+        // Son güncelleme zamanını güncelle
+        const timestamp = new Date(data.timestamp);
+        const timeStr = timestamp.toLocaleTimeString('tr-TR');
+        document.querySelector(`.last-update-${employeeId}`).textContent = timeStr;
+        
+        // Haritayı çalışanın konumuna odakla
+        map.setView(position, map.getZoom());
+    }
+
+    // Çalışan kartına tıklandığında haritayı o konuma odakla
+    document.querySelectorAll('.employee-card').forEach(card => {
+        card.addEventListener('click', () => {
+            const employeeId = card.dataset.employeeId;
+            const marker = markers[employeeId];
+            if (marker) {
+                map.setView(marker.getLatLng(), 15);
+            }
+        });
+    });
+</script>
+{% endblock %} 
