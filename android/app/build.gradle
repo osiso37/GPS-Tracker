@@ -4,6 +4,7 @@ plugins {
 }
 
 android {
+    namespace 'com.company.gpstracker'
     compileSdkVersion 33
     
     defaultConfig {
