@@ -7,6 +7,8 @@ import android.location.Location
 import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
+import android.widget.Button
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
@@ -22,34 +24,79 @@ import java.io.IOException
 class MainActivity : AppCompatActivity() {
     private lateinit var fusedLocationClient: FusedLocationProviderClient
     private lateinit var locationCallback: LocationCallback
+    private lateinit var startButton: Button
+    private lateinit var stopButton: Button
+    private lateinit var statusText: TextView
+    
     private val LOCATION_PERMISSION_REQUEST = 1000
-    private val serverUrl = "https://your-server-url.com/api/location"
-    private val employeeId = "YOUR_EMPLOYEE_ID" // Bu değer giriş yapıldığında sunucudan alınmalı
+    // Yerel sunucu için - WiFi IP adresinizi buraya yazın (örn: 192.168.1.100)
+    private val serverUrl = "http://192.168.1.100:5000/api/location"
+    private val employeeId = "MOBILE_USER_001"
     private val client = OkHttpClient()
+    private var isTracking = false
     
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         
+        // UI elementlerini bağla
+        startButton = findViewById(R.id.startButton)
+        stopButton = findViewById(R.id.stopButton)
+        statusText = findViewById(R.id.statusText)
+        
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
+        
+        // Buton click listener'larını ekle
+        startButton.setOnClickListener {
+            if (checkPermissions()) {
+                startTracking()
+            } else {
+                requestPermissions()
+            }
+        }
+        
+        stopButton.setOnClickListener {
+            stopTracking()
+        }
         
         // Konum güncellemelerini dinle
         locationCallback = object : LocationCallback() {
             override fun onLocationResult(locationResult: LocationResult) {
                 locationResult.lastLocation?.let { location ->
                     sendLocationToServer(location)
+                    updateStatus("Konum gönderildi: ${location.latitude}, ${location.longitude}")
                 }
             }
         }
         
-        checkPermissionsAndStartTracking()
+        updateStatus("Takibi başlatmak için butona basın")
     }
     
-    private fun checkPermissionsAndStartTracking() {
-        when {
-            checkPermissions() -> startLocationUpdates()
-            shouldShowRequestPermissionRationale() -> showPermissionExplanation()
-            else -> requestPermissions()
+    private fun startTracking() {
+        if (!checkPermissions()) {
+            requestPermissions()
+            return
+        }
+        
+        updateStatus("GPS takibi başlatılıyor...")
+        startLocationUpdates()
+        isTracking = true
+        startButton.isEnabled = false
+        stopButton.isEnabled = true
+    }
+    
+    private fun stopTracking() {
+        fusedLocationClient.removeLocationUpdates(locationCallback)
+        isTracking = false
+        startButton.isEnabled = true
+        stopButton.isEnabled = false
+        updateStatus("GPS takibi durduruldu")
+        Toast.makeText(this, "Takip durduruldu", Toast.LENGTH_SHORT).show()
+    }
+    
+    private fun updateStatus(message: String) {
+        runOnUiThread {
+            statusText.text = message
         }
     }
     
@@ -65,21 +112,6 @@ class MainActivity : AppCompatActivity() {
             REQUIRED_PERMISSIONS,
             LOCATION_PERMISSION_REQUEST
         )
-    }
-    
-    private fun shouldShowRequestPermissionRationale(): Boolean {
-        return REQUIRED_PERMISSIONS.any {
-            ActivityCompat.shouldShowRequestPermissionRationale(this, it)
-        }
-    }
-    
-    private fun showPermissionExplanation() {
-        Toast.makeText(
-            this,
-            "Konum izni uygulamanın çalışması için gereklidir",
-            Toast.LENGTH_LONG
-        ).show()
-        requestPermissions()
     }
     
     private fun startLocationUpdates() {
@@ -99,6 +131,8 @@ class MainActivity : AppCompatActivity() {
                 locationCallback,
                 Looper.getMainLooper()
             )
+            Toast.makeText(this, "GPS takibi başlatıldı", Toast.LENGTH_SHORT).show()
+            updateStatus("GPS takibi aktif - konum bekleniyor...")
         }
     }
     
@@ -119,15 +153,21 @@ class MainActivity : AppCompatActivity() {
             
         client.newCall(request).enqueue(object : Callback {
             override fun onFailure(call: Call, e: IOException) {
-                // Hata durumunda lokasyonu yerel veritabanına kaydet
+                runOnUiThread {
+                    updateStatus("Sunucu bağlantı hatası: ${e.message}")
+                }
                 e.printStackTrace()
             }
             
             override fun onResponse(call: Call, response: Response) {
-                if (!response.isSuccessful) {
-                    // Başarısız yanıt durumunda lokasyonu yerel veritabanına kaydet
-                    response.close()
+                runOnUiThread {
+                    if (response.isSuccessful) {
+                        updateStatus("Konum başarıyla gönderildi ✓")
+                    } else {
+                        updateStatus("Sunucu hatası: ${response.code}")
+                    }
                 }
+                response.close()
             }
         })
     }
@@ -140,21 +180,23 @@ class MainActivity : AppCompatActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == LOCATION_PERMISSION_REQUEST) {
             if (grantResults.all { it == PackageManager.PERMISSION_GRANTED }) {
-                startLocationUpdates()
+                startTracking()
             } else {
                 Toast.makeText(
                     this,
                     "Konum izni olmadan uygulama çalışamaz",
                     Toast.LENGTH_LONG
                 ).show()
-                finish()
+                updateStatus("Konum izni gerekli")
             }
         }
     }
     
     override fun onDestroy() {
         super.onDestroy()
-        fusedLocationClient.removeLocationUpdates(locationCallback)
+        if (isTracking) {
+            fusedLocationClient.removeLocationUpdates(locationCallback)
+        }
     }
     
     companion object {
