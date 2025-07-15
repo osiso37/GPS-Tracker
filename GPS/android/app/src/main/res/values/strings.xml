@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">GPS Tracker</string>
+    <string name="location_permission_required">Konum izni gerekli</string>
+    <string name="location_permission_denied">Konum izni reddedildi</string>
+    <string name="tracking_started">GPS takibi başlatıldı</string>
+    <string name="tracking_stopped">GPS takibi durduruldu</string>
+    <string name="server_error">Sunucu hatası</string>
+    <string name="location_sent">Konum gönderildi</string>
+</resources> 
