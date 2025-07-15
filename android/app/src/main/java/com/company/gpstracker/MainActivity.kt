@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     
     private val LOCATION_PERMISSION_REQUEST = 1000
     // Yerel sunucu için - WiFi IP adresinizi buraya yazın (örn: 192.168.1.100)
-    private val serverUrl = "http://192.168.1.100:5000/api/location"
+    private val serverUrl = "http://192.168.1.28:5000/api/location"
     private val employeeId = "MOBILE_USER_001"
     private val client = OkHttpClient()
     private var isTracking = false
