@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Looper
 import android.provider.Settings
 import android.widget.Button
+import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -27,6 +28,10 @@ class MainActivity : AppCompatActivity() {
     private lateinit var startButton: Button
     private lateinit var stopButton: Button
     private lateinit var statusText: TextView
+    private lateinit var editFirstName: EditText
+    private lateinit var editLastName: EditText
+    private lateinit var editPhone: EditText
+    private lateinit var deviceInfo: TextView
     
     private val LOCATION_PERMISSION_REQUEST = 1000
     // Yerel sunucu için - WiFi IP adresinizi buraya yazın (örn: 192.168.1.100)
@@ -43,15 +48,25 @@ class MainActivity : AppCompatActivity() {
         startButton = findViewById(R.id.startButton)
         stopButton = findViewById(R.id.stopButton)
         statusText = findViewById(R.id.statusText)
+        editFirstName = findViewById(R.id.editFirstName)
+        editLastName = findViewById(R.id.editLastName)
+        editPhone = findViewById(R.id.editPhone)
+        deviceInfo = findViewById(R.id.deviceInfo)
+        
+        // Cihaz bilgilerini göster
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        deviceInfo.text = "📱 IMEI: ${deviceId.take(16)}\n🏭 Seri No: MOB_${deviceId.takeLast(6)}"
         
         fusedLocationClient = LocationServices.getFusedLocationProviderClient(this)
         
         // Buton click listener'larını ekle
         startButton.setOnClickListener {
-            if (checkPermissions()) {
-                startTracking()
-            } else {
-                requestPermissions()
+            if (validateUserInput()) {
+                if (checkPermissions()) {
+                    startTracking()
+                } else {
+                    requestPermissions()
+                }
             }
         }
         
@@ -69,7 +84,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         
-        updateStatus("Takibi başlatmak için butona basın")
+        updateStatus("📝 Bilgilerinizi girip takibi başlatın")
     }
     
     private fun startTracking() {
@@ -136,13 +151,47 @@ class MainActivity : AppCompatActivity() {
         }
     }
     
+    private fun validateUserInput(): Boolean {
+        val firstName = editFirstName.text.toString().trim()
+        val lastName = editLastName.text.toString().trim()
+        val phone = editPhone.text.toString().trim()
+        
+        when {
+            firstName.isEmpty() -> {
+                editFirstName.error = "Ad gerekli"
+                editFirstName.requestFocus()
+                return false
+            }
+            lastName.isEmpty() -> {
+                editLastName.error = "Soyad gerekli"
+                editLastName.requestFocus()
+                return false
+            }
+            phone.isEmpty() -> {
+                editPhone.error = "Telefon numarası gerekli"
+                editPhone.requestFocus()
+                return false
+            }
+            !phone.matches(Regex("^[0-9]{11}$")) -> {
+                editPhone.error = "11 haneli telefon numarası girin (05xxxxxxxxx)"
+                editPhone.requestFocus()
+                return false
+            }
+        }
+        return true
+    }
+    
     private fun sendLocationToServer(location: Location) {
         val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
+        val firstName = editFirstName.text.toString().trim()
+        val lastName = editLastName.text.toString().trim()
+        val phone = editPhone.text.toString().trim()
+        
         val json = JSONObject().apply {
             put("employee_id", employeeId)
-            put("first_name", "Mobil") // Kullanıcı giriş yaparsa güncellenebilir
-            put("last_name", "Kullanıcı")
-            put("phone", "Telefon Yok") // Kullanıcı giriş yaparsa güncellenebilir
+            put("first_name", firstName)
+            put("last_name", lastName)
+            put("phone", phone)
             put("imei", deviceId)
             put("latitude", location.latitude)
             put("longitude", location.longitude)

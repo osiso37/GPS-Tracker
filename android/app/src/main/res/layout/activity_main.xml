@@ -1,10 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:padding="16dp">
+
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="16dp"
-    android:gravity="center">
+    android:gravity="center_horizontal">
 
     <TextView
         android:layout_width="wrap_content"
@@ -14,35 +18,95 @@
         android:textStyle="bold"
         android:layout_marginBottom="20dp" />
 
+    <!-- Kullanıcı Bilgileri -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="👤 Kullanıcı Bilgileri"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp" />
+
+    <EditText
+        android:id="@+id/editFirstName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Ad"
+        android:inputType="textPersonName"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/editLastName"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Soyad"
+        android:inputType="textPersonName"
+        android:layout_marginBottom="8dp" />
+
+    <EditText
+        android:id="@+id/editPhone"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="Telefon Numarası (05xxxxxxxxx)"
+        android:inputType="phone"
+        android:layout_marginBottom="20dp" />
+
+    <!-- Takip Durumu -->
     <TextView
         android:id="@+id/statusText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="GPS takibi başlatılıyor..."
+        android:text="Bilgilerinizi girip takibi başlatın"
         android:textSize="16sp"
-        android:layout_marginBottom="20dp" />
+        android:layout_marginBottom="20dp"
+        android:textAlignment="center" />
 
+    <!-- Takip Butonları -->
     <Button
         android:id="@+id/startButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Takibi Başlat"
-        android:layout_marginBottom="10dp" />
+        android:text="📍 Takibi Başlat"
+        android:layout_marginBottom="10dp"
+        android:textSize="16sp"
+        android:paddingHorizontal="30dp" />
 
     <Button
         android:id="@+id/stopButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Takibi Durdur"
-        android:enabled="false" />
+        android:text="⏹ Takibi Durdur"
+        android:enabled="false"
+        android:layout_marginBottom="20dp"
+        android:textSize="16sp"
+        android:paddingHorizontal="30dp" />
+
+    <!-- Cihaz Bilgileri -->
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="📱 Cihaz Bilgileri"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:layout_marginBottom="10dp" />
+
+    <TextView
+        android:id="@+id/deviceInfo"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="IMEI: Yükleniyor..."
+        android:textSize="12sp"
+        android:layout_marginBottom="20dp"
+        android:textAlignment="center" />
 
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="Şirket GPS Takip Sistemi\nKVKK Uyumlu"
-        android:textSize="12sp"
+        android:text="🏢 Şirket GPS Takip Sistemi\n📋 KVKK Uyumlu\n🔒 Güvenli Bağlantı"
+        android:textSize="10sp"
         android:gravity="center"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="20dp"
         android:alpha="0.7" />
 
-</LinearLayout> 
+</LinearLayout>
+</ScrollView> 
