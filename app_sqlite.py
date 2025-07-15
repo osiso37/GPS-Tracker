@@ -59,8 +59,8 @@ def index():
             
             <div class="nav">
                 <a href="/employees">👥 Çalışanlar</a>
+                <a href="/map">🗺️ Canlı Harita</a>
                 <a href="/demo-data">➕ Demo Veri Ekle</a>
-                <a href="/api/location">📡 API Test</a>
             </div>
             
             <div class="stats">
@@ -134,6 +134,45 @@ def employees():
     </html>
     """
 
+# Google Maps harita sayfası
+@app.route('/map')
+def map_page():
+    return render_template('map.html')
+
+# API: Mevcut konumları getir
+@app.route('/api/locations')
+def get_locations():
+    # Her çalışan için en son konum kaydını getir
+    subquery = db.session.query(
+        LocationHistory.employee_id,
+        db.func.max(LocationHistory.timestamp).label('max_timestamp')
+    ).group_by(LocationHistory.employee_id).subquery()
+    
+    latest_locations = db.session.query(LocationHistory, Employee).join(
+        Employee, LocationHistory.employee_id == Employee.id
+    ).join(
+        subquery,
+        (LocationHistory.employee_id == subquery.c.employee_id) &
+        (LocationHistory.timestamp == subquery.c.max_timestamp)
+    ).all()
+    
+    locations = []
+    for loc_history, employee in latest_locations:
+        locations.append({
+            'employee_id': employee.id,
+            'first_name': employee.first_name,
+            'last_name': employee.last_name,
+            'phone': employee.phone_number,
+            'imei': employee.imei,
+            'latitude': float(loc_history.latitude),
+            'longitude': float(loc_history.longitude),
+            'accuracy': float(loc_history.accuracy) if loc_history.accuracy else None,
+            'speed': float(loc_history.speed) if loc_history.speed else 0,
+            'timestamp': loc_history.timestamp.isoformat()
+        })
+    
+    return jsonify(locations)
+
 # Demo veri ekleme
 @app.route('/demo-data')
 def add_demo_data():
@@ -193,8 +232,25 @@ def add_demo_data():
 def update_location():
     data = request.json
     try:
+        # Çalışanı IMEI'ye göre bul veya oluştur
+        imei = data.get('imei', 'UNKNOWN_IMEI')
+        employee = Employee.query.filter_by(imei=imei).first()
+        
+        if not employee:
+            # Yeni çalışan oluştur
+            employee = Employee(
+                first_name=data.get('first_name', 'Mobil'),
+                last_name=data.get('last_name', 'Kullanıcı'),
+                phone_number=data.get('phone', 'Telefon yok'),
+                imei=imei,
+                program_serial_no=f"MOB_{imei[-6:]}"  # Son 6 karakter
+            )
+            db.session.add(employee)
+            db.session.commit()
+        
+        # Konum kaydı oluştur
         location = LocationHistory(
-            employee_id=data['employee_id'],
+            employee_id=employee.id,
             latitude=data['latitude'],
             longitude=data['longitude'],
             accuracy=data.get('accuracy'),
@@ -202,8 +258,11 @@ def update_location():
         )
         db.session.add(location)
         db.session.commit()
-        return jsonify({'status': 'success'})
+        
+        print(f"📍 Konum alındı: {employee.first_name} {employee.last_name} - {data['latitude']}, {data['longitude']}")
+        return jsonify({'status': 'success', 'employee_id': employee.id})
     except Exception as e:
+        print(f"❌ Konum kaydı hatası: {str(e)}")
         return jsonify({'status': 'error', 'message': str(e)}), 400
 
 # Veritabanı tabloları oluştur

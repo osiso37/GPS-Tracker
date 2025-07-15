@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GPS Takip Haritası</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f5f5f5;
+        }
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        #map {
+            height: 100%;
+            width: 100%;
+        }
+        .nav {
+            margin-bottom: 20px;
+        }
+        .nav a {
+            background: #3498db;
+            color: white;
+            padding: 8px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-right: 5px;
+            font-size: 14px;
+        }
+        .nav a:hover {
+            background: #2980b9;
+        }
+        .employee-card {
+            background: #fff;
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .employee-card:hover {
+            background: #f8f9fa;
+            border-color: #3498db;
+        }
+        .employee-name {
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        .employee-info {
+            font-size: 12px;
+            color: #7f8c8d;
+            margin: 3px 0;
+        }
+        .status-online {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .status-offline {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <h2>📍 GPS Takip</h2>
+            
+            <div class="nav">
+                <a href="/">🏠 Ana Sayfa</a>
+                <a href="/employees">👥 Çalışanlar</a>
+            </div>
+            
+            <h3>🚗 Aktif Takipler</h3>
+            <div id="employee-list">
+                <div class="loading">Konum verileri yükleniyor...</div>
+            </div>
+        </div>
+        
+        <div class="map-container">
+            <div id="map"></div>
+        </div>
+    </div>
+
+    <script>
+        let map;
+        let markers = {};
+        let employeeData = {};
+        
+        // Haritayı başlat
+        function initMap() {
+            map = L.map('map').setView([39.9334, 32.8597], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // Konumları yükle
+            loadLocations();
+            setInterval(loadLocations, 5000); // Her 5 saniyede güncelle
+        }
+        
+        // Konum verilerini sunucudan yükle
+        async function loadLocations() {
+            try {
+                const response = await fetch('/api/locations');
+                const locations = await response.json();
+                updateMap(locations);
+                updateSidebar(locations);
+            } catch (error) {
+                console.error('Konum yüklenirken hata:', error);
+            }
+        }
+        
+        // Haritayı güncelle
+        function updateMap(locations) {
+            // Mevcut işaretleyicileri temizle
+            Object.values(markers).forEach(marker => map.removeLayer(marker));
+            markers = {};
+            
+            locations.forEach(location => {
+                const position = [location.latitude, location.longitude];
+                
+                // Özel işaretleyici ikonu
+                const marker = L.marker(position).addTo(map);
+                
+                // Bilgi penceresi içeriği
+                const popupContent = `
+                    <div style="padding: 5px;">
+                        <h4>${location.first_name} ${location.last_name}</h4>
+                        <p><strong>📱 Telefon:</strong> ${location.phone || 'N/A'}</p>
+                        <p><strong>🆔 IMEI:</strong> ${location.imei || 'N/A'}</p>
+                        <p><strong>⚡ Hız:</strong> ${location.speed ? location.speed.toFixed(1) + ' km/h' : '0 km/h'}</p>
+                        <p><strong>📍 Doğruluk:</strong> ${location.accuracy ? location.accuracy.toFixed(1) + ' m' : 'N/A'}</p>
+                        <p><strong>🕒 Son Güncelleme:</strong> ${new Date(location.timestamp).toLocaleString('tr-TR')}</p>
+                    </div>
+                `;
+                
+                marker.bindPopup(popupContent);
+                markers[location.employee_id] = marker;
+                employeeData[location.employee_id] = location;
+            });
+            
+            // İlk konuma odakla
+            if (locations.length > 0) {
+                const firstLocation = locations[0];
+                map.setView([firstLocation.latitude, firstLocation.longitude], 12);
+            }
+        }
+        
+        // Kenar çubuğunu güncelle
+        function updateSidebar(locations) {
+            const employeeList = document.getElementById('employee-list');
+            
+            if (locations.length === 0) {
+                employeeList.innerHTML = '<div class="loading">Henüz konum verisi yok</div>';
+                return;
+            }
+            
+            const html = locations.map(location => {
+                const lastUpdate = new Date(location.timestamp);
+                const now = new Date();
+                const diffMinutes = Math.floor((now - lastUpdate) / (1000 * 60));
+                const isOnline = diffMinutes < 5;
+                
+                return `
+                    <div class="employee-card" onclick="focusEmployee('${location.employee_id}')">
+                        <div class="employee-name">${location.first_name} ${location.last_name}</div>
+                        <div class="employee-info">📱 ${location.phone || 'Telefon yok'}</div>
+                        <div class="employee-info">🆔 ${location.imei || 'IMEI yok'}</div>
+                        <div class="employee-info">⚡ ${location.speed ? location.speed.toFixed(1) + ' km/h' : '0 km/h'}</div>
+                        <div class="employee-info ${isOnline ? 'status-online' : 'status-offline'}">
+                            ${isOnline ? '🟢 Çevrimiçi' : `🔴 ${diffMinutes} dk önce`}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            employeeList.innerHTML = html;
+        }
+        
+        // Çalışana odaklan
+        function focusEmployee(employeeId) {
+            const marker = markers[employeeId];
+            if (marker) {
+                map.setView(marker.getLatLng(), 15);
+                marker.openPopup();
+            }
+        }
+    </script>
+    
+    <!-- Leaflet (OpenStreetMap) API -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Otomatik olarak haritayı başlat
+        document.addEventListener('DOMContentLoaded', initMap);
+    </script>
+</body>
+</html> 

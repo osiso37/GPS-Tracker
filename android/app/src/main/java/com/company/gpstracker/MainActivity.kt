@@ -137,13 +137,17 @@ class MainActivity : AppCompatActivity() {
     }
     
     private fun sendLocationToServer(location: Location) {
+        val deviceId = Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID)
         val json = JSONObject().apply {
             put("employee_id", employeeId)
+            put("first_name", "Mobil") // Kullanıcı giriş yaparsa güncellenebilir
+            put("last_name", "Kullanıcı")
+            put("phone", "Telefon Yok") // Kullanıcı giriş yaparsa güncellenebilir
+            put("imei", deviceId)
             put("latitude", location.latitude)
             put("longitude", location.longitude)
             put("accuracy", location.accuracy)
             put("speed", location.speed)
-            put("imei", Settings.Secure.getString(contentResolver, Settings.Secure.ANDROID_ID))
         }
         
         val request = Request.Builder()
